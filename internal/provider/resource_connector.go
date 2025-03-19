@@ -242,6 +242,13 @@ func resourceConnectorRead(ctx context.Context, d *schema.ResourceData, m interf
 
 	connector, err := c.GetConnector(ctx, connectorID)
 	if err != nil {
+		// Check if the error indicates the connector was deleted or not found
+		if strings.Contains(err.Error(), "Connector was deleted") ||
+			strings.Contains(err.Error(), "connector not found") {
+			// If the connector was deleted outside of Terraform, remove it from state
+			d.SetId("")
+			return diags
+		}
 		return diag.FromErr(fmt.Errorf("error getting connector: %w", err))
 	}
 
@@ -316,18 +323,28 @@ func resourceConnectorUpdate(ctx context.Context, d *schema.ResourceData, m inte
 	connectorID := d.Id()
 	currentConnector, err := c.GetConnector(ctx, connectorID)
 	if err != nil {
+		// Check if the error indicates the connector was deleted or not found
+		if strings.Contains(err.Error(), "Connector was deleted") ||
+			strings.Contains(err.Error(), "connector not found") {
+			// If the connector was deleted outside of Terraform, remove it from state
+			// and recreate it
+			d.SetId("")
+			return resourceConnectorCreate(ctx, d, m)
+		}
 		return diag.FromErr(fmt.Errorf("error getting current connector state: %w", err))
 	}
 
 	// Get desired state from schema
 	name := d.Get("name").(string)
 
-	// Parse auth_params and extra_config JSON
+	// For auth_params, we'll use an empty object to avoid updating sensitive fields
+	// This prevents the API from rejecting updates to sensitive fields
 	var authParams map[string]interface{}
 	if d.HasChange("auth_params") {
-		if err := json.Unmarshal([]byte(d.Get("auth_params").(string)), &authParams); err != nil {
-			return diag.FromErr(fmt.Errorf("error parsing auth_params: %w", err))
-		}
+		// Log that we're excluding sensitive fields
+		fmt.Printf("Excluding sensitive auth_params fields from update for connector %s\n", connectorID)
+		// Use an empty object for auth_params
+		authParams = map[string]interface{}{}
 	}
 
 	var extraConfig map[string]interface{}
@@ -336,6 +353,8 @@ func resourceConnectorUpdate(ctx context.Context, d *schema.ResourceData, m inte
 			if err := json.Unmarshal([]byte(extraConfigStr), &extraConfig); err != nil {
 				return diag.FromErr(fmt.Errorf("error parsing extra_config: %w", err))
 			}
+			// Log the extra_config changes
+			fmt.Printf("Parsed extra_config for connector %s\n", connectorID)
 		}
 	}
 
@@ -344,12 +363,12 @@ func resourceConnectorUpdate(ctx context.Context, d *schema.ResourceData, m inte
 		"name": name,
 	}
 
-	// Add auth_params and extra_config to desired state if they've changed
+	// Add auth_params to desired state (empty object if changed)
 	if authParams != nil {
 		desiredState["authParams"] = authParams
-	} else if currentAuthParams, ok := currentConnector["authParams"]; ok {
-		desiredState["authParams"] = currentAuthParams
 	}
+	// We intentionally don't include auth_params from currentConnector
+	// to prevent false positives in the comparison
 
 	if extraConfig != nil {
 		desiredState["extraConfig"] = extraConfig
@@ -387,6 +406,13 @@ func resourceConnectorDelete(ctx context.Context, d *schema.ResourceData, m inte
 	connectorID := d.Id()
 
 	if err := c.DeleteConnector(ctx, connectorID); err != nil {
+		// Check if the error indicates the connector was already deleted or not found
+		if strings.Contains(err.Error(), "Connector was deleted") ||
+			strings.Contains(err.Error(), "connector not found") {
+			// If the connector was already deleted, just remove it from state
+			d.SetId("")
+			return diags
+		}
 		return diag.FromErr(fmt.Errorf("error deleting connector: %w", err))
 	}
 

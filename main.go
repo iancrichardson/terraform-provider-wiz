@@ -6,6 +6,9 @@ import (
 	"github.com/iancrichardson/terraform-provider-wiz/internal/provider"
 )
 
+// Version is the current version of the provider
+var Version = "0.4.0"
+
 func main() {
 	plugin.Serve(&plugin.ServeOpts{
 		ProviderFunc: func() *schema.Provider {
