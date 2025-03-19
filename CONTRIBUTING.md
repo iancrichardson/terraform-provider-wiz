@@ -35,7 +35,7 @@ Please be respectful and considerate of others when contributing to this project
 
 ### Setting Up Your Development Environment
 
-1. Install Go (version 1.18 or later)
+1. Install Go (version 1.22 or later)
 2. Install Terraform (version 0.13 or later)
 3. Install any IDE or editor of your choice (VSCode, GoLand, etc.)
 

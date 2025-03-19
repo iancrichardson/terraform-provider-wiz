@@ -8,7 +8,7 @@ This Terraform provider allows you to manage Wiz connectors through Terraform. I
 ## Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 0.13.x
-- [Go](https://golang.org/doc/install) >= 1.18 (to build the provider plugin)
+- [Go](https://golang.org/doc/install) >= 1.22 (to build the provider plugin)
 
 ## Building The Provider
 
@@ -222,7 +222,7 @@ output "config_test_success" {
 ### Requirements
 
 - [Terraform](https://www.terraform.io/downloads.html) >= 0.13.x
-- [Go](https://golang.org/doc/install) >= 1.18
+- [Go](https://golang.org/doc/install) >= 1.22
 
 ### Building
 
